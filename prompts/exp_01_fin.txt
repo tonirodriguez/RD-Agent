@@ -1,0 +1,61 @@
+Objective:
+Design and evaluate an equity trading strategy based on automatically discovered alpha factors
+using daily OHLCV data.
+
+Universe:
+- US equities (liquid stocks, e.g. top 300 by average 60-day volume).
+- Daily frequency.
+- Long-short, dollar neutral portfolio.
+
+Data:
+- Use local OHLCV CSV files stored on disk
+- Data location: ./data/ohlcv/
+- One CSV file per asset
+- Columns: date, open, high, low, close, volume
+- Do NOT download data from the internet
+
+
+Baseline:
+- Equal-weighted long-short momentum strategy (20-day returns).
+- Use this as a benchmark.
+
+Factor discovery:
+- Automatically generate candidate alpha factors based on:
+  - momentum
+  - mean reversion
+  - volatility
+  - volume
+  - price ranges
+- Factors must be explainable and simple (avoid overly complex expressions).
+
+Backtesting protocol:
+- Train: 2016–2020
+- Validation: 2021–2022
+- Test: 2023–2024
+- Monthly rebalancing.
+- Transaction costs: 10 bps per trade.
+- Penalize monthly turnover above 40%.
+
+Evaluation metrics:
+- Annualized return
+- Annualized volatility
+- Sharpe ratio
+- Max drawdown
+- Monthly turnover
+- Stability of performance across periods
+
+Optimization goal:
+- Improve Sharpe ratio on the test set relative to the baseline
+- While keeping max drawdown and turnover under control
+
+Output requirements:
+1. Description of the top 3 discovered factors and their financial intuition
+2. Backtest performance table vs baseline
+3. Equity curves for train/validation/test
+4. Discussion of robustness and risks
+5. Final recommended strategy and rationale
+
+Constraints:
+- Prefer robustness over extreme performance.
+- Do not overfit to the test period.
+- If no factor clearly beats the baseline, explain why.

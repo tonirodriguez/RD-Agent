@@ -1,0 +1,54 @@
+Objective:
+Discover and evaluate quantitative long-short equity strategies using daily OHLCV data.
+
+Data:
+- Use local OHLCV CSV files stored on disk
+- Data location: ./data/ohlcv/
+- One CSV file per asset
+- Columns: date, open, high, low, close, volume
+- Do NOT download data from the internet
+
+Universe:
+- US equities
+- Daily frequency
+
+Strategy type:
+- Market-neutral long/short
+- Dollar neutral
+- Monthly rebalancing
+
+Baseline:
+- Equal-weighted 20-day momentum strategy
+
+Factor generation:
+- Generate interpretable alpha factors based on:
+  - momentum
+  - mean reversion
+  - volatility
+  - volume
+- Avoid overly complex expressions
+
+Backtest protocol:
+- Train: 2016–2020
+- Validation: 2021–2022
+- Test: 2023–2024
+- Transaction cost: 10 bps per trade
+- Penalize monthly turnover above 40%
+
+Evaluation metrics:
+- Annualized return
+- Annualized volatility
+- Sharpe ratio
+- Max drawdown
+- Monthly turnover
+
+Optimization goal:
+- Improve Sharpe ratio on test vs baseline
+- Keep drawdown and turnover under control
+
+Output:
+1. Top 3 discovered factors with intuition
+2. Performance comparison vs baseline
+3. Equity curves
+4. Discussion of robustness
+5. Final recommended strategy
