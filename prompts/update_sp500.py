@@ -1,5 +1,6 @@
 import sys
 import os
+import multiprocessing
 import pandas as pd
 from pathlib import Path
 import fire
@@ -9,7 +10,7 @@ QLIB_REPO = os.environ.get("QLIB_REPO", "/mnt/d/src/qlib")
 sys.path.append(os.path.join(QLIB_REPO, "scripts", "data_collector", "yahoo"))
 
 import collector
-from collector import Run, YahooCollectorUS1d
+from collector import Run, YahooCollectorUS1d, YahooNormalize
 
 # Extendemos el recolector de Yahoo para que solo use la lista de SP500
 class SP500Collector(YahooCollectorUS1d):
@@ -38,13 +39,96 @@ class SP500Collector(YahooCollectorUS1d):
         print(f"Total de símbolos a descargar: {len(res)}")
         return res
 
+
+class _DailyDateSanitizer:
+    @staticmethod
+    def _sanitize_daily_dates(df: pd.DataFrame, date_field_name: str) -> pd.DataFrame:
+        cleaned = df.copy()
+        date_series = cleaned[date_field_name].astype(str).str.extract(r"^(\d{4}-\d{2}-\d{2})", expand=False)
+        cleaned[date_field_name] = date_series.fillna(cleaned[date_field_name])
+        return cleaned
+
+    @staticmethod
+    def normalize_yahoo(
+        df: pd.DataFrame,
+        calendar_list: list = None,
+        date_field_name: str = "date",
+        symbol_field_name: str = "symbol",
+        last_close: float = None,
+    ):
+        cleaned = _DailyDateSanitizer._sanitize_daily_dates(df, date_field_name)
+        return YahooNormalize.normalize_yahoo(
+            cleaned,
+            calendar_list=calendar_list,
+            date_field_name=date_field_name,
+            symbol_field_name=symbol_field_name,
+            last_close=last_close,
+        )
+
+
+class SP500NormalizeUS1d(_DailyDateSanitizer, collector.YahooNormalizeUS1d):
+    pass
+
+
+class SP500NormalizeUS1dExtend(_DailyDateSanitizer, collector.YahooNormalizeUS1dExtend):
+    pass
+
 # Inyectamos la clase en el módulo para que 'Run' la encuentre al usar getattr()
 collector.SP500Collector = SP500Collector
+collector.SP500NormalizeUS1d = SP500NormalizeUS1d
+collector.SP500NormalizeUS1dExtend = SP500NormalizeUS1dExtend
 
 class SP500Run(Run):
     @property
     def collector_class_name(self):
         return "SP500Collector"
+
+    @property
+    def normalize_class_name(self):
+        return "SP500NormalizeUS1d"
+
+    def update_data_to_bin(
+        self,
+        qlib_data_1d_dir: str,
+        end_date: str = None,
+        check_data_length: int = None,
+        delay: float = 1,
+        exists_skip: bool = False,
+    ):
+        if exists_skip:
+            raise ValueError("exists_skip=True no esta soportado en este wrapper")
+
+        qlib_data_1d_dir = str(Path(qlib_data_1d_dir).expanduser().resolve())
+        if not collector.exists_qlib_data(qlib_data_1d_dir):
+            collector.GetData().qlib_data(
+                target_dir=qlib_data_1d_dir, interval=self.interval, region=self.region, exists_skip=exists_skip
+            )
+
+        calendar_path = Path(qlib_data_1d_dir).joinpath("calendars/day.txt")
+        if not calendar_path.exists():
+            raise ValueError(f"No se encontro el calendario base en {calendar_path}")
+
+        calendar_df = pd.read_csv(calendar_path)
+        trading_date = (pd.Timestamp(calendar_df.iloc[-1, 0]) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = (pd.Timestamp(trading_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+        self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
+        self.max_workers = (
+            max(multiprocessing.cpu_count() - 2, 1)
+            if self.max_workers is None or self.max_workers <= 1
+            else self.max_workers
+        )
+        self.normalize_data_1d_extend(qlib_data_1d_dir)
+
+        dump = collector.DumpDataUpdate(
+            data_path=self.normalize_dir,
+            qlib_dir=qlib_data_1d_dir,
+            exclude_fields="symbol,date",
+            max_workers=self.max_workers,
+        )
+        dump.dump()
 
 if __name__ == "__main__":
     fire.Fire(SP500Run)
