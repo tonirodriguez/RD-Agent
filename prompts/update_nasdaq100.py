@@ -5,11 +5,51 @@ from pathlib import Path
 import fire
 
 # Añadir el repositorio de Qlib al path para importar el recolector
-QLIB_REPO = os.environ.get("QLIB_REPO", "/mnt/d/src/qlib")
+QLIB_REPO = os.environ.get("QLIB_REPO", "/mnt/c/Users/trodriguez/src/qlib")
 sys.path.append(os.path.join(QLIB_REPO, "scripts", "data_collector", "yahoo"))
 
 import collector
 from collector import Run, YahooCollectorUS1d
+
+
+def _patch_mixed_date_parsing():
+    original_executor = collector.Normalize._executor
+
+    def _executor(self, file_path):
+        try:
+            return original_executor(self, file_path)
+        except ValueError as exc:
+            if "unconverted data remains when parsing with format" not in str(exc):
+                raise
+
+        file_path = Path(file_path)
+
+        # Preserve qlib's CSV parsing behavior while allowing mixed Yahoo date formats.
+        default_na = pd._libs.parsers.STR_NA_VALUES.copy()  # pylint: disable=I1101
+        symbol_na = default_na.copy()
+        symbol_na.remove("NA")
+        columns = pd.read_csv(file_path, nrows=0).columns
+        df = pd.read_csv(
+            file_path,
+            dtype={self._symbol_field_name: str},
+            keep_default_na=False,
+            na_values={col: symbol_na if col == self._symbol_field_name else default_na for col in columns},
+        )
+
+        df = self._normalize_obj.normalize(df)
+        if df is not None and not df.empty:
+            if self._end_date is not None:
+                parsed_dates = pd.to_datetime(df[self._date_field_name], format="mixed", utc=True, errors="coerce")
+                parsed_dates = parsed_dates.dt.tz_convert(None).dt.normalize()
+                end_date = pd.Timestamp(self._end_date).normalize()
+                df = df[parsed_dates.notna() & (parsed_dates <= end_date)]
+            df.to_csv(self._target_dir.joinpath(file_path.name), index=False)
+
+    collector.Normalize._executor = _executor
+
+
+_patch_mixed_date_parsing()
+
 
 # Extendemos el recolector de Yahoo para que solo use la lista de Nasdaq 100
 class Nasdaq100Collector(YahooCollectorUS1d):

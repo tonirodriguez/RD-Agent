@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # === CONFIG ===
-QLIB_REPO="${QLIB_REPO:-/mnt/d/src/qlib}"         # ruta donde clonaste qlib
+QLIB_REPO="${QLIB_REPO:-/mnt/c/Users/trodriguez/src/qlib}"         # ruta donde clonaste qlib
 DATA_DIR="${DATA_DIR:-$HOME/.qlib/qlib_data/us_data}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 START_DATE="2023-12-31"

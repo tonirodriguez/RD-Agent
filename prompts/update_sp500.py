@@ -16,7 +16,9 @@ from collector import Run, YahooCollectorUS1d, YahooNormalize
 class SP500Collector(YahooCollectorUS1d):
     def get_instrument_list(self):
         print("Obteniendo lista de símbolos de SP500 exclusivamente...")
-        data_dir = os.environ.get("DATA_DIR", os.path.expanduser("~/.qlib/qlib_data/us_data"))
+        data_dir = os.environ.get("SP500_INSTRUMENTS_DATA_DIR") or os.environ.get(
+            "DATA_DIR", os.path.expanduser("~/.qlib/qlib_data/us_data")
+        )
         ins_path = Path(data_dir) / "instruments" / "sp500.txt"
         
         if not ins_path.exists():
@@ -99,6 +101,7 @@ class SP500Run(Run):
             raise ValueError("exists_skip=True no esta soportado en este wrapper")
 
         qlib_data_1d_dir = str(Path(qlib_data_1d_dir).expanduser().resolve())
+        os.environ["SP500_INSTRUMENTS_DATA_DIR"] = qlib_data_1d_dir
         if not collector.exists_qlib_data(qlib_data_1d_dir):
             collector.GetData().qlib_data(
                 target_dir=qlib_data_1d_dir, interval=self.interval, region=self.region, exists_skip=exists_skip
