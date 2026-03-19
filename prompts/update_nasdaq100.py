@@ -111,5 +111,48 @@ class Nasdaq100Run(Run):
     def collector_class_name(self):
         return "Nasdaq100Collector"
 
+    def update_data_to_bin(
+        self,
+        qlib_data_1d_dir: str,
+        end_date: str = None,
+        check_data_length: int = None,
+        delay: float = 1,
+        exists_skip: bool = False,
+    ):
+        if self.interval.lower() != "1d":
+            collector.logger.warning(f"currently supports 1d data updates: --interval 1d")
+
+        qlib_data_1d_dir = str(Path(qlib_data_1d_dir).expanduser().resolve())
+        if not collector.exists_qlib_data(qlib_data_1d_dir):
+            collector.GetData().qlib_data(
+                target_dir=qlib_data_1d_dir, interval=self.interval, region=self.region, exists_skip=exists_skip
+            )
+
+        calendar_df = pd.read_csv(Path(qlib_data_1d_dir).joinpath("calendars/day.txt"))
+        trading_date = (pd.Timestamp(calendar_df.iloc[-1, 0]) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = (pd.Timestamp(trading_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+        self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
+        self.max_workers = (
+            max(collector.multiprocessing.cpu_count() - 2, 1)
+            if self.max_workers is None or self.max_workers <= 1
+            else self.max_workers
+        )
+        self.normalize_data_1d_extend(qlib_data_1d_dir)
+
+        collector.DumpDataUpdate(
+            data_path=self.normalize_dir,
+            qlib_dir=qlib_data_1d_dir,
+            exclude_fields="symbol,date",
+            max_workers=self.max_workers,
+        ).dump()
+
+        collector.logger.warning(
+            "Skipping qlib's optional US index component refresh because it imports fake_useragent. "
+            "Price/bin update completed without that step."
+        )
+
 if __name__ == "__main__":
     fire.Fire(Nasdaq100Run)
