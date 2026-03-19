@@ -12,6 +12,31 @@ import collector
 from collector import Run, YahooCollectorUS1d
 
 
+def _parse_mixed_dates(values):
+    parsed = pd.to_datetime(values, format="mixed", utc=True, errors="coerce")
+    if isinstance(parsed, pd.Series):
+        return parsed.dt.tz_convert(None)
+    return parsed.tz_convert(None)
+
+
+def _patch_yahoo_normalize():
+    original_normalize_yahoo = collector.YahooNormalize.normalize_yahoo
+
+    def normalize_yahoo(
+        df: pd.DataFrame,
+        calendar_list: list = None,
+        date_field_name: str = "date",
+        symbol_field_name: str = "symbol",
+        last_close: float = None,
+    ):
+        df = df.copy()
+        if not df.empty and date_field_name in df.columns:
+            df[date_field_name] = _parse_mixed_dates(df[date_field_name])
+        return original_normalize_yahoo(df, calendar_list, date_field_name, symbol_field_name, last_close)
+
+    collector.YahooNormalize.normalize_yahoo = staticmethod(normalize_yahoo)
+
+
 def _patch_mixed_date_parsing():
     original_executor = collector.Normalize._executor
 
@@ -39,8 +64,7 @@ def _patch_mixed_date_parsing():
         df = self._normalize_obj.normalize(df)
         if df is not None and not df.empty:
             if self._end_date is not None:
-                parsed_dates = pd.to_datetime(df[self._date_field_name], format="mixed", utc=True, errors="coerce")
-                parsed_dates = parsed_dates.dt.tz_convert(None).dt.normalize()
+                parsed_dates = _parse_mixed_dates(df[self._date_field_name]).dt.normalize()
                 end_date = pd.Timestamp(self._end_date).normalize()
                 df = df[parsed_dates.notna() & (parsed_dates <= end_date)]
             df.to_csv(self._target_dir.joinpath(file_path.name), index=False)
@@ -48,6 +72,7 @@ def _patch_mixed_date_parsing():
     collector.Normalize._executor = _executor
 
 
+_patch_yahoo_normalize()
 _patch_mixed_date_parsing()
 
 
