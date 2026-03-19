@@ -1,5 +1,6 @@
 import sys
 import os
+import types
 import pandas as pd
 from pathlib import Path
 import fire
@@ -10,6 +11,25 @@ sys.path.append(os.path.join(QLIB_REPO, "scripts", "data_collector", "yahoo"))
 
 import collector
 from collector import Run, YahooCollectorUS1d
+
+
+def _install_fake_useragent_fallback():
+    if "fake_useragent" in sys.modules:
+        return
+
+    fake_useragent = types.ModuleType("fake_useragent")
+
+    class UserAgent:  # pragma: no cover - compatibility shim
+        @property
+        def random(self):
+            return (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/122.0.0.0 Safari/537.36"
+            )
+
+    fake_useragent.UserAgent = UserAgent
+    sys.modules["fake_useragent"] = fake_useragent
 
 
 def _parse_mixed_dates(values):
@@ -72,6 +92,7 @@ def _patch_mixed_date_parsing():
     collector.Normalize._executor = _executor
 
 
+_install_fake_useragent_fallback()
 _patch_yahoo_normalize()
 _patch_mixed_date_parsing()
 
@@ -114,6 +135,7 @@ class Nasdaq100Run(Run):
     def update_data_to_bin(
         self,
         qlib_data_1d_dir: str,
+        trading_date: str = None,
         end_date: str = None,
         check_data_length: int = None,
         delay: float = 1,
@@ -128,11 +150,16 @@ class Nasdaq100Run(Run):
                 target_dir=qlib_data_1d_dir, interval=self.interval, region=self.region, exists_skip=exists_skip
             )
 
-        calendar_df = pd.read_csv(Path(qlib_data_1d_dir).joinpath("calendars/day.txt"))
-        trading_date = (pd.Timestamp(calendar_df.iloc[-1, 0]) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        if trading_date is None:
+            calendar_df = pd.read_csv(Path(qlib_data_1d_dir).joinpath("calendars/day.txt"))
+            trading_date = (pd.Timestamp(calendar_df.iloc[-1, 0]) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            trading_date = pd.Timestamp(trading_date).strftime("%Y-%m-%d")
 
         if end_date is None:
             end_date = (pd.Timestamp(trading_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            end_date = pd.Timestamp(end_date).strftime("%Y-%m-%d")
 
         self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
         self.max_workers = (
@@ -149,10 +176,10 @@ class Nasdaq100Run(Run):
             max_workers=self.max_workers,
         ).dump()
 
-        collector.logger.warning(
-            "Skipping qlib's optional US index component refresh because it imports fake_useragent. "
-            "Price/bin update completed without that step."
+        get_instruments = getattr(
+            collector.importlib.import_module("data_collector.us_index.collector"), "get_instruments"
         )
+        get_instruments(str(qlib_data_1d_dir), "NASDAQ100", market_index="us_index")
 
 if __name__ == "__main__":
     fire.Fire(Nasdaq100Run)

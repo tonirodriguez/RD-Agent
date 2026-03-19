@@ -1,16 +1,47 @@
 import sys
 import os
+import types
 import multiprocessing
 import pandas as pd
 from pathlib import Path
 import fire
 
 # Añadir el repositorio de Qlib al path para importar el recolector
-QLIB_REPO = os.environ.get("QLIB_REPO", "/mnt/d/src/qlib")
-sys.path.append(os.path.join(QLIB_REPO, "scripts", "data_collector", "yahoo"))
+DEFAULT_QLIB_REPO = "/mnt/c/Users/trodriguez/src/qlib"
+QLIB_REPO = os.environ.get("QLIB_REPO", DEFAULT_QLIB_REPO)
+COLLECTOR_DIR = Path(QLIB_REPO) / "scripts" / "data_collector" / "yahoo"
+if not COLLECTOR_DIR.exists():
+    alt_repo = Path(__file__).resolve().parents[2] / "qlib"
+    alt_collector_dir = alt_repo / "scripts" / "data_collector" / "yahoo"
+    if alt_collector_dir.exists():
+        COLLECTOR_DIR = alt_collector_dir
+sys.path.append(str(COLLECTOR_DIR))
 
 import collector
 from collector import Run, YahooCollectorUS1d, YahooNormalize
+
+
+def _install_fake_useragent_fallback():
+    if "fake_useragent" in sys.modules:
+        return
+
+    fake_useragent = types.ModuleType("fake_useragent")
+
+    class UserAgent:  # pragma: no cover - compatibility shim
+        @property
+        def random(self):
+            return (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/122.0.0.0 Safari/537.36"
+            )
+
+    fake_useragent.UserAgent = UserAgent
+    sys.modules["fake_useragent"] = fake_useragent
+
+
+_install_fake_useragent_fallback()
+
 
 # Extendemos el recolector de Yahoo para que solo use la lista de SP500
 class SP500Collector(YahooCollectorUS1d):
@@ -132,6 +163,11 @@ class SP500Run(Run):
             max_workers=self.max_workers,
         )
         dump.dump()
+
+        get_instruments = getattr(
+            collector.importlib.import_module("data_collector.us_index.collector"), "get_instruments"
+        )
+        get_instruments(str(qlib_data_1d_dir), "SP500", market_index="us_index")
 
 if __name__ == "__main__":
     fire.Fire(SP500Run)

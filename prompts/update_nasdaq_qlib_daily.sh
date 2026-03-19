@@ -6,7 +6,7 @@ QLIB_REPO="${QLIB_REPO:-/mnt/c/Users/trodriguez/src/qlib}"         # ruta donde 
 DATA_DIR="${DATA_DIR:-$HOME/.qlib/qlib_data/us_data}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 START_DATE="2023-12-31"
-TODAY="2025-12-31" #$(date +%F)
+TODAY=$(date +%F)
 
 # === CHECKS ===
 if [ ! -d "$QLIB_REPO/scripts/data_collector/yahoo" ]; then
