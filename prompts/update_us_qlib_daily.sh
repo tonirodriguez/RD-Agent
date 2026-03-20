@@ -2,11 +2,18 @@
 set -euo pipefail
 
 # === CONFIG ===
-QLIB_REPO="${QLIB_REPO:-/mnt/d/src/qlib}"         # ruta donde clonaste qlib
+QLIB_REPO="${QLIB_REPO:-/mnt/c/Users/trodriguez/src/qlib}"         # ruta donde clonaste qlib
 DATA_DIR="${DATA_DIR:-$HOME/.qlib/qlib_data/us_data}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
-START_DATE="2025-12-31"
+START_DATE="${START_DATE:-2025-12-31}"
+REBUILD_START_DATE="${REBUILD_START_DATE:-1999-12-31}"
 TODAY=$(date +%F)
+MODE="update"
+
+if [ "${1:-}" = "--clean-rebuild" ]; then
+  MODE="rebuild"
+  shift
+fi
 
 # === CHECKS ===
 if [ ! -d "$QLIB_REPO/scripts/data_collector/yahoo" ]; then
@@ -15,21 +22,29 @@ if [ ! -d "$QLIB_REPO/scripts/data_collector/yahoo" ]; then
   exit 1
 fi
 
-if [ ! -d "$DATA_DIR" ]; then
+if [ ! -d "$DATA_DIR" ] && [ "$MODE" = "update" ]; then
   echo "⚠️  No encuentro el dataset Qlib US en: $DATA_DIR"
   echo "   Asegúrate de haber inicializado los datos primero o el collector lo hará."
 fi
 
-echo "➡️ Actualizando datos Qlib US desde $START_DATE hasta $TODAY ..."
-
 cd "$QLIB_REPO"
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
 
-# Nota: en collector.py de Qlib Yahoo, --trading_date funciona como 'start_date'
-$PYTHON_BIN scripts/data_collector/yahoo/collector.py update_data_to_bin \
-  --qlib_data_1d_dir "$DATA_DIR" \
-  --trading_date "$START_DATE" \
-  --end_date "$TODAY" \
-  --region US
-
-echo "✅ Update completado desde $START_DATE hasta $TODAY."
+if [ "$MODE" = "rebuild" ]; then
+  echo "➡️ Reconstruyendo datos Qlib US desde $REBUILD_START_DATE hasta $TODAY ..."
+  $PYTHON_BIN scripts/update_us_all.py rebuild_data_to_bin \
+    --qlib_data_1d_dir "$DATA_DIR" \
+    --start_date "$REBUILD_START_DATE" \
+    --end_date "$TODAY" \
+    --backup_existing True \
+    --region US
+  echo "✅ Reconstrucción completada desde $REBUILD_START_DATE hasta $TODAY."
+else
+  echo "➡️ Actualizando datos Qlib US desde $START_DATE hasta $TODAY ..."
+  $PYTHON_BIN scripts/update_us_all.py update_data_to_bin \
+    --qlib_data_1d_dir "$DATA_DIR" \
+    --trading_date "$START_DATE" \
+    --end_date "$TODAY" \
+    --region US
+  echo "✅ Update completado desde $START_DATE hasta $TODAY."
+fi

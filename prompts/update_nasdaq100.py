@@ -101,14 +101,22 @@ _patch_mixed_date_parsing()
 class Nasdaq100Collector(YahooCollectorUS1d):
     def get_instrument_list(self):
         print("Obteniendo lista de símbolos de Nasdaq 100 exclusivamente...")
-        data_dir = os.environ.get("DATA_DIR", os.path.expanduser("~/.qlib/qlib_data/us_data"))
+        data_dir = os.environ.get("NASDAQ100_INSTRUMENTS_DATA_DIR") or os.environ.get(
+            "DATA_DIR", os.path.expanduser("~/.qlib/qlib_data/us_data")
+        )
+        effective_date = pd.Timestamp(
+            os.environ.get("NASDAQ100_EFFECTIVE_DATE", pd.Timestamp.today().strftime("%Y-%m-%d"))
+        )
         ins_path = Path(data_dir) / "instruments" / "nasdaq100.txt"
         
         if not ins_path.exists():
             raise FileNotFoundError(f"No se encontró el archivo de instrumentos {ins_path}. Necesitas tener el dataset inicial US con Nasdaq 100.")
         
         df = pd.read_csv(ins_path, sep="\t", names=["symbol", "start_date", "end_date"])
-        symbols = df["symbol"].unique().tolist()
+        df["start_date"] = pd.to_datetime(df["start_date"], errors="coerce")
+        df["end_date"] = pd.to_datetime(df["end_date"], errors="coerce")
+        active_mask = df["start_date"].le(effective_date) & df["end_date"].ge(effective_date)
+        symbols = df.loc[active_mask, "symbol"].dropna().unique().tolist()
         
         # Opcional: añadir ticker del índice
         symbols.append("^NDX")
@@ -145,6 +153,7 @@ class Nasdaq100Run(Run):
             collector.logger.warning(f"currently supports 1d data updates: --interval 1d")
 
         qlib_data_1d_dir = str(Path(qlib_data_1d_dir).expanduser().resolve())
+        os.environ["NASDAQ100_INSTRUMENTS_DATA_DIR"] = qlib_data_1d_dir
         if not collector.exists_qlib_data(qlib_data_1d_dir):
             collector.GetData().qlib_data(
                 target_dir=qlib_data_1d_dir, interval=self.interval, region=self.region, exists_skip=exists_skip
@@ -160,6 +169,8 @@ class Nasdaq100Run(Run):
             end_date = (pd.Timestamp(trading_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
         else:
             end_date = pd.Timestamp(end_date).strftime("%Y-%m-%d")
+        effective_date = (pd.Timestamp(end_date) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        os.environ["NASDAQ100_EFFECTIVE_DATE"] = effective_date
 
         self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
         self.max_workers = (
