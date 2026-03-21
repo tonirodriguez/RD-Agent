@@ -14,7 +14,7 @@ MARKET = "nasdaq100"
 
 # El rango de evaluación. Ponemos una fecha final alta para tomar siempre "hoy" (el último registro real)
 START = "2026-01-01"
-END   = "2026-03-14" 
+END   = "2026-03-19" 
 
 TOP_K = 5
 MOM_LOOKBACK = 20    # Días para mirar el retorno

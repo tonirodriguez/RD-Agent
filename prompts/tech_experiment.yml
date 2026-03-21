@@ -12,7 +12,7 @@ data_handler_config: &data_handler_config
     start_time: 2008-01-01
     end_time: null
     fit_start_time: 2008-01-01
-    fit_end_time: 2021-12-31
+    fit_end_time: 2026-03-19
     instruments: *market # Extrae los features de TODO el mercado
     infer_processors:
         - class: FilterCol

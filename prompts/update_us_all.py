@@ -197,6 +197,26 @@ collector.USAllCollector = USAllCollector
 
 
 class USAllRun(Run):
+    @staticmethod
+    def _find_valid_universe_dir(base_dir: Path, target_name: str):
+        candidates = []
+        direct_candidate = base_dir / target_name
+        candidates.append(direct_candidate)
+        candidates.extend(sorted(base_dir.glob(f"{target_name}_backup_*"), reverse=True))
+
+        for candidate in candidates:
+            all_path = candidate / "instruments" / "all.txt"
+            day_path = candidate / "calendars" / "day.txt"
+            if (
+                candidate.exists()
+                and all_path.exists()
+                and day_path.exists()
+                and all_path.stat().st_size > 0
+                and day_path.stat().st_size > 0
+            ):
+                return candidate
+        return None
+
     def _refresh_us_indexes(self, qlib_data_1d_dir: str):
         get_instruments = getattr(
             collector.importlib.import_module("data_collector.us_index.collector"), "get_instruments"
@@ -287,6 +307,8 @@ class USAllRun(Run):
                 universe_dir = backup_dir
             elif qlib_data_1d_dir.exists() and (qlib_data_1d_dir / "instruments" / "all.txt").exists():
                 universe_dir = qlib_data_1d_dir
+            else:
+                universe_dir = self._find_valid_universe_dir(qlib_data_1d_dir.parent, qlib_data_1d_dir.name)
 
         if universe_dir is None or not (universe_dir / "instruments" / "all.txt").exists():
             raise FileNotFoundError(

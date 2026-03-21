@@ -34,7 +34,7 @@ if len(tickers) == 0:
 # 2) Cargar features
 df = D.features(tickers[:5], fields=["$close", "$open", "$volume"], freq="day", start_time=START, end_time=END)
 print("\nfeatures df shape:", df.shape)
-print(df.head())
+print(df.tail())
 
 if df.empty:
     raise RuntimeError(

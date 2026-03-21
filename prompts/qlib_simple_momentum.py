@@ -12,7 +12,7 @@ PROVIDER_URI = "~/.qlib/qlib_data/us_data" if REGION == "US" else "~/.qlib/qlib_
 
 MARKET = "nasdaq100" if REGION == "US" else "csi300"  # para CN suele funcionar 'csi300'
 START = "2026-01-01"
-END   = "2026-03-14"
+END   = "2026-03-19"
 
 TOP_K = 10               # número de acciones en cartera
 LOOKBACK = 20            # momentum 20 días
