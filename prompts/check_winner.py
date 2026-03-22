@@ -9,7 +9,7 @@ qlib.init(provider_uri="~/.qlib/qlib_data/us_data", region=REG_US)
 recorder = R.get_recorder(experiment_name="workflow")
 
 pred_df = recorder.load_object("pred.pkl")
-tech_giants = ["AAPL", "MSFT", "META", "GOOGL", "TSLA"]
+tech_giants = ["AAPL", "MSFT", "META", "GOOGL", "TSLA", "AMZN", "NVDA", "INTC", "CSCO", "ADBE"  ]
 
 # Quedarnos con el final de la tabla para las 3 y ordenarlo
 tech_preds = pred_df.loc[(slice(None), tech_giants), :]
