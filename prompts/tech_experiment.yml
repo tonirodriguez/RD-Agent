@@ -10,9 +10,9 @@ benchmark: &benchmark ^NDX
 data_handler_config: &data_handler_config
     # 1. Obtenemos datos de las tecnológicas
     start_time: 2008-01-01
-    end_time: null
+    end_time: 2026-03-18
     fit_start_time: 2008-01-01
-    fit_end_time: 2026-03-19
+    fit_end_time: 2026-03-18
     instruments: *market # Extrae los features de TODO el mercado
     infer_processors:
         - class: FilterCol
@@ -38,7 +38,7 @@ port_analysis_config: &port_analysis_config
             n_drop: 0
     backtest:
         start_time: 2024-01-01
-        end_time: null
+        end_time: 2026-03-18
         account: 100000
         benchmark: *benchmark
         exchange_kwargs:
