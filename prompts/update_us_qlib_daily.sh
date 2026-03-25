@@ -7,6 +7,7 @@ DATA_DIR="${DATA_DIR:-$HOME/.qlib/qlib_data/us_data}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 START_DATE="${START_DATE:-2025-12-31}"
 REBUILD_START_DATE="${REBUILD_START_DATE:-1999-12-31}"
+MAX_WORKERS="${MAX_WORKERS:-1}"
 TODAY=$(date +%F)
 MODE="update"
 REBUILD_UNIVERSE_DIR="${REBUILD_UNIVERSE_DIR:-}"
@@ -30,8 +31,10 @@ fi
 
 cd "$QLIB_REPO"
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
+export QLIB_MAX_WORKERS="$MAX_WORKERS"
 
 if [ "$MODE" = "rebuild" ]; then
+  echo "ℹ️  Usando QLIB_MAX_WORKERS=$QLIB_MAX_WORKERS"
   if [ -z "$REBUILD_UNIVERSE_DIR" ]; then
     if [ -s "$DATA_DIR/instruments/all.txt" ] && [ -s "$DATA_DIR/calendars/day.txt" ]; then
       REBUILD_UNIVERSE_DIR="$DATA_DIR"
@@ -61,6 +64,7 @@ if [ "$MODE" = "rebuild" ]; then
     --region US
   echo "✅ Reconstrucción completada desde $REBUILD_START_DATE hasta $TODAY."
 else
+  echo "ℹ️  Usando QLIB_MAX_WORKERS=$QLIB_MAX_WORKERS"
   echo "➡️ Actualizando datos Qlib US desde $START_DATE hasta $TODAY ..."
   $PYTHON_BIN scripts/update_us_all.py update_data_to_bin \
     --qlib_data_1d_dir "$DATA_DIR" \

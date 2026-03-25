@@ -61,6 +61,10 @@ def _patch_yahoo_normalize():
         df = df.copy()
         if not df.empty and date_field_name in df.columns:
             df[date_field_name] = _parse_mixed_dates(df[date_field_name])
+            if calendar_list is not None:
+                source_dates = df[date_field_name].dropna().tolist()
+                if source_dates:
+                    calendar_list = sorted(set(map(pd.Timestamp, calendar_list)) | set(map(pd.Timestamp, source_dates)))
         return original_normalize_yahoo(df, calendar_list, date_field_name, symbol_field_name, last_close)
 
     collector.YahooNormalize.normalize_yahoo = staticmethod(normalize_yahoo)
@@ -198,6 +202,32 @@ collector.USAllCollector = USAllCollector
 
 class USAllRun(Run):
     @staticmethod
+    def _get_available_memory_gb():
+        try:
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            available_pages = os.sysconf("SC_AVPHYS_PAGES")
+            return (page_size * available_pages) / (1024 ** 3)
+        except (AttributeError, OSError, ValueError):
+            return None
+
+    def _resolve_dump_workers(self):
+        if self.max_workers is not None and self.max_workers > 1:
+            return self.max_workers
+
+        env_value = os.environ.get("QLIB_MAX_WORKERS")
+        if env_value:
+            try:
+                return max(int(env_value), 1)
+            except ValueError:
+                collector.logger.warning(f"Ignoring invalid QLIB_MAX_WORKERS={env_value!r}")
+
+        cpu_based = max(multiprocessing.cpu_count() - 2, 1)
+        available_memory_gb = self._get_available_memory_gb()
+        if available_memory_gb is not None and available_memory_gb < 6:
+            return 1
+        return min(cpu_based, 2)
+
+    @staticmethod
     def _find_valid_universe_dir(base_dir: Path, target_name: str):
         candidates = []
         direct_candidate = base_dir / target_name
@@ -261,11 +291,8 @@ class USAllRun(Run):
         os.environ["US_ALL_EFFECTIVE_DATE"] = effective_date
 
         self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
-        self.max_workers = (
-            max(collector.multiprocessing.cpu_count() - 2, 1)
-            if self.max_workers is None or self.max_workers <= 1
-            else self.max_workers
-        )
+        self.max_workers = self._resolve_dump_workers()
+        collector.logger.info(f"Using max_workers={self.max_workers} for incremental bin dump")
         self.normalize_data_1d_extend(qlib_data_1d_dir)
 
         collector.DumpDataUpdate(
@@ -344,11 +371,8 @@ class USAllRun(Run):
                 "Clean rebuild aborted: no source CSV files were downloaded. "
                 "The dataset will not be overwritten with empty calendars or instruments."
             )
-        self.max_workers = (
-            max(collector.multiprocessing.cpu_count() - 2, 1)
-            if self.max_workers is None or self.max_workers <= 1
-            else self.max_workers
-        )
+        self.max_workers = self._resolve_dump_workers()
+        collector.logger.info(f"Using max_workers={self.max_workers} for clean rebuild bin dump")
         self.normalize_data(end_date=end_date)
         normalized_files = list(self.normalize_dir.glob("*.csv"))
         if not normalized_files:
