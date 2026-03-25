@@ -48,6 +48,48 @@ def _parse_mixed_dates(values):
     return parsed.tz_convert(None)
 
 
+def _read_last_instrument_end_date(data_dir: Path) -> pd.Timestamp | None:
+    ins_path = data_dir / "instruments" / "all.txt"
+    if not ins_path.exists():
+        return None
+
+    df = pd.read_csv(ins_path, sep="\t", names=["symbol", "start_date", "end_date"], usecols=[0, 1, 2])
+    if df.empty:
+        return None
+
+    end_dates = pd.to_datetime(df["end_date"], errors="coerce").dropna()
+    if end_dates.empty:
+        return None
+    return end_dates.max().normalize()
+
+
+def _read_last_calendar_date(data_dir: Path) -> pd.Timestamp | None:
+    calendar_path = data_dir / "calendars" / "day.txt"
+    if not calendar_path.exists():
+        return None
+
+    calendar_df = pd.read_csv(calendar_path, header=None)
+    if calendar_df.empty:
+        return None
+
+    last_date = pd.to_datetime(calendar_df.iloc[-1, 0], errors="coerce")
+    if pd.isna(last_date):
+        return None
+    return last_date.normalize()
+
+
+def _resolve_incremental_effective_date(data_dir: Path, requested_effective_date: pd.Timestamp) -> pd.Timestamp:
+    instrument_end_date = _read_last_instrument_end_date(data_dir)
+    if instrument_end_date is not None:
+        return min(requested_effective_date.normalize(), instrument_end_date)
+
+    calendar_last_date = _read_last_calendar_date(data_dir)
+    if calendar_last_date is not None:
+        return min(requested_effective_date.normalize(), calendar_last_date)
+
+    return requested_effective_date.normalize()
+
+
 def _patch_yahoo_normalize():
     original_normalize_yahoo = collector.YahooNormalize.normalize_yahoo
 
@@ -287,8 +329,11 @@ class USAllRun(Run):
             end_date = (pd.Timestamp(trading_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
         else:
             end_date = pd.Timestamp(end_date).strftime("%Y-%m-%d")
-        effective_date = (pd.Timestamp(end_date) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-        os.environ["US_ALL_EFFECTIVE_DATE"] = effective_date
+        requested_effective_date = pd.Timestamp(end_date) - pd.Timedelta(days=1)
+        effective_date = _resolve_incremental_effective_date(Path(qlib_data_1d_dir), requested_effective_date)
+        effective_date_str = effective_date.strftime("%Y-%m-%d")
+        os.environ["US_ALL_EFFECTIVE_DATE"] = effective_date_str
+        collector.logger.info(f"Using US_ALL_EFFECTIVE_DATE={effective_date_str}")
 
         self.download_data(delay=delay, start=trading_date, end=end_date, check_data_length=check_data_length)
         self.max_workers = self._resolve_dump_workers()

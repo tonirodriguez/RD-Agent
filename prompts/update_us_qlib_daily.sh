@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # === CONFIG ===
-QLIB_REPO="${QLIB_REPO:-/mnt/c/Users/trodriguez/src/qlib}"         # ruta donde clonaste qlib
+QLIB_REPO="${QLIB_REPO:-/mnt/d/src/qlib}"         # ruta donde clonaste qlib
 DATA_DIR="${DATA_DIR:-$HOME/.qlib/qlib_data/us_data}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
-START_DATE="${START_DATE:-2025-12-31}"
+START_DATE="${START_DATE:-}"
 REBUILD_START_DATE="${REBUILD_START_DATE:-1999-12-31}"
 MAX_WORKERS="${MAX_WORKERS:-1}"
 TODAY=$(date +%F)
@@ -31,6 +31,7 @@ fi
 
 cd "$QLIB_REPO"
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
+export QLIB_REPO
 export QLIB_MAX_WORKERS="$MAX_WORKERS"
 
 if [ "$MODE" = "rebuild" ]; then
@@ -65,11 +66,21 @@ if [ "$MODE" = "rebuild" ]; then
   echo "✅ Reconstrucción completada desde $REBUILD_START_DATE hasta $TODAY."
 else
   echo "ℹ️  Usando QLIB_MAX_WORKERS=$QLIB_MAX_WORKERS"
-  echo "➡️ Actualizando datos Qlib US desde $START_DATE hasta $TODAY ..."
-  $PYTHON_BIN scripts/update_us_all.py update_data_to_bin \
-    --qlib_data_1d_dir "$DATA_DIR" \
-    --trading_date "$START_DATE" \
-    --end_date "$TODAY" \
+  update_args=(
+    update_data_to_bin
+    --qlib_data_1d_dir "$DATA_DIR"
+    --end_date "$TODAY"
     --region US
-  echo "✅ Update completado desde $START_DATE hasta $TODAY."
+  )
+
+  if [ -n "$START_DATE" ]; then
+    echo "➡️ Actualizando datos Qlib US desde $START_DATE hasta $TODAY ..."
+    echo "ℹ️  Forzando trading_date=$START_DATE"
+    update_args+=(--trading_date "$START_DATE")
+  else
+    echo "➡️ Actualizando datos Qlib US en modo incremental automático hasta $TODAY ..."
+  fi
+
+  $PYTHON_BIN scripts/update_us_all.py "${update_args[@]}"
+  echo "✅ Update completado hasta $TODAY."
 fi
