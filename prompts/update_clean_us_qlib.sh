@@ -1,1 +1,0 @@
-./updata_us_qlib.sh --clean-rebuild --universe-dir ~/.qlib/qlib_data/us_data/ 
