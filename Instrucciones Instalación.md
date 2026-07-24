@@ -49,6 +49,20 @@ pip install -U pip setuptools wheel
 pip install -e . -c constraints/3.10.txt
 ```
 
+> **Usa Python 3.10 o 3.11** (RD-Agent no está probado en 3.12; da fallos de dependencias).
+
+> ⚠️ **Fijar `pydantic-ai` a la serie 1.x (obligatorio).** El repo deja `pydantic-ai-slim`
+> sin versión y pip instala la 2.x, que rehízo la API de MCP y elimina
+> `MCPServerStreamableHTTP` → error `ImportError: cannot import name 'MCPServerStreamableHTTP'`.
+> Tras instalar, ejecuta:
+>
+> ```bash
+> pip install "pydantic-ai-slim[mcp,openai,prefect]<2"
+> python -c "from pydantic_ai.mcp import MCPServerStreamableHTTP; print('OK')"
+> ```
+>
+> (Recomendado: fija también `pydantic-ai-slim[mcp,openai,prefect]<2` en `requirements.txt`.)
+
 > En **cada nueva terminal** activa el entorno antes de usar rdagent:
 > `source .venv/bin/activate`
 
@@ -105,19 +119,52 @@ Detalles:
 
 ---
 
-## 5. Health check (antes de correr nada)
+## 5. Validación (antes de correr nada)
+
+> ⚠️ **Importante con OpenRouter:** el comando `rdagent health_check` **no reconoce
+> OpenRouter**. Su `env_check` solo contempla `DEEPSEEK_API_KEY` o `OPENAI_API_KEY`, así
+> que con nuestra config (`OPENROUTER_API_KEY` + `LITELLM_PROXY_API_KEY`) muestra
+> *"No valid configuration was found"* y falla con `UnboundLocalError`. Es una limitación
+> del checker, **no** de tu `.env`: el runtime de RD-Agent sí lee `OPENROUTER_API_KEY`.
+
+### 5.1 Verifica Docker + puertos (sin la parte de LLM)
 
 ```bash
 source .venv/bin/activate
-rdagent health_check
+rdagent health_check --no-check-env
 ```
 
-Verifica Docker + puertos + acceso a chat y embedding. Para saltar comprobaciones:
+### 5.2 Verifica el LLM directamente con LiteLLM (chat + embedding por OpenRouter)
+
+Esta es la prueba **autoritativa** del LLM, ya que es lo que RD-Agent usa por debajo:
 
 ```bash
-rdagent health_check --no-check-env                 # salta el chequeo del LLM
-rdagent health_check --no-check-env --no-check-docker
+cd /home/toni/src/RD-Agent      # ajusta a tu ruta del repo
+source .venv/bin/activate
+python - <<'PY'
+import os, litellm
+from dotenv import load_dotenv
+load_dotenv(".env")
+r = litellm.completion(model=os.getenv("CHAT_MODEL"),
+                       messages=[{"role":"user","content":"Say hi"}])
+print("CHAT OK:", r.choices[0].message.content[:60])
+e = litellm.embedding(model=os.getenv("EMBEDDING_MODEL"),
+                      input=["hello world"],
+                      api_key=os.getenv("LITELLM_PROXY_API_KEY"),
+                      api_base=os.getenv("LITELLM_PROXY_API_BASE"))
+print("EMBED OK, dim:", len(e.data[0]["embedding"]))
+PY
 ```
+
+Si imprime `CHAT OK` y `EMBED OK`, la configuración funciona y puedes lanzar escenarios.
+
+### 5.3 (Opcional) Hacer que `rdagent health_check` pase en verde
+
+Si quieres que el checker oficial valide sin error, añade a `.env` la variable
+`DEEPSEEK_API_KEY` con **el mismo valor de tu clave de OpenRouter**. Así `env_check` entra
+por su rama DeepSeek (chat con tu `CHAT_MODEL=openrouter/...` + esa key, embedding por
+`LITELLM_PROXY_*`). Es solo para contentar al checker; el runtime sigue usando
+`OPENROUTER_API_KEY`.
 
 ---
 
@@ -215,11 +262,15 @@ bash setup_wsl.sh --with-data
 
 # 2. Pegar la OpenRouter API key en .env (OPENROUTER_API_KEY y LITELLM_PROXY_API_KEY)
 
-# 3. Activar entorno y validar
-source .venv/bin/activate
-rdagent health_check
+# 3. Fijar pydantic-ai a la 1.x (evita el ImportError de MCP)
+pip install "pydantic-ai-slim[mcp,openai,prefect]<2"
 
-# 4. Lanzar cualquier escenario
+# 4. Activar entorno y validar (health_check NO soporta OpenRouter → ver §5)
+source .venv/bin/activate
+rdagent health_check --no-check-env          # Docker + puertos
+#   y valida el LLM con el script de LiteLLM del §5.2
+
+# 5. Lanzar cualquier escenario
 rdagent fin_quant
 rdagent fin_factor
 rdagent fin_model
@@ -233,8 +284,13 @@ rdagent data_science --competition arf-12-hours-prediction-task
 ## 9. Problemas frecuentes
 
 - **`rdagent: command not found`** → falta activar el venv: `source .venv/bin/activate`.
+- **`ImportError: cannot import name 'MCPServerStreamableHTTP'`** → `pydantic-ai` 2.x instalado;
+  fija la 1.x: `pip install "pydantic-ai-slim[mcp,openai,prefect]<2"` (ver §2).
+- **`health_check` → "No valid configuration was found" + `UnboundLocalError`** → el checker no
+  soporta OpenRouter. Usa `rdagent health_check --no-check-env` + el script de LiteLLM del §5.2.
+  (Opcional: añade `DEEPSEEK_API_KEY=<tu key de OpenRouter>` para que pase en verde, §5.3.)
 - **Docker permission denied** → no estás en el grupo `docker` o falta la integración WSL (§3).
-- **Error de embedding en `health_check`** → revisa que la clave esté en `LITELLM_PROXY_API_KEY`
+- **Error de embedding en la prueba LiteLLM** → revisa que la clave esté en `LITELLM_PROXY_API_KEY`
   y que `LITELLM_PROXY_API_BASE="https://openrouter.ai/api/v1"`.
 - **Coste de API** → cada loop hace muchas llamadas; puedes activar caché en `.env`
   (`USE_CHAT_CACHE=True`, `USE_EMBEDDING_CACHE=True`).

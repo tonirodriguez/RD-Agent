@@ -40,8 +40,8 @@ Parámetros aceptados (verificados en el código):
 | `--checkout / --no-checkout` (`-c/-C`) | Reusar carpeta de logs limpiando o conservando |
 
 ```bash
-rdagent fin_factor --loop_n 3
-rdagent fin_factor --step_n 1
+rdagent fin_factor --loop-n 3
+rdagent fin_factor --step-n 1
 rdagent fin_factor --all_duration "2h"
 rdagent fin_factor --path <sesión>
 ```
@@ -86,3 +86,12 @@ rdagent fin_factor --loop_n 1
 
 > Consejo: en la primera prueba de cualquier escenario, limita con `--loop_n 1` o
 > `--all_duration "30m"` para controlar el coste de API antes de lanzar loops largos.
+
+
+## 5. Copiar dentro del FileSystem de WSL
+
+Utilizar el file system de Windows hace que vaya muy despacio
+
+```bash
+cp -r "/mnt/c/Users/trodriguez/src/RD-Agent/" ~/dev/
+```

@@ -32,6 +32,9 @@ bash setup_wsl.sh --with-data
 Luego, **pega tu OpenRouter API key** en `.env` (dos variables, mismo valor):
 `OPENROUTER_API_KEY` y `LITELLM_PROXY_API_KEY`.
 
+> ⚠️ **Fija `pydantic-ai` a la 1.x** (si no, `ImportError: MCPServerStreamableHTTP`):
+> `pip install "pydantic-ai-slim[mcp,openai,prefect]<2"`. Usa Python 3.10/3.11 (no 3.12).
+
 En cada nueva terminal: `source .venv/bin/activate`
 
 ---
@@ -46,14 +49,35 @@ Docker nativo: `sudo usermod -aG docker $USER` y reabre la terminal.
 
 ---
 
-## 3. Health check (antes de correr nada)
+## 3. Validación (antes de correr nada)
+
+> ⚠️ `rdagent health_check` **no soporta OpenRouter** (solo `DEEPSEEK_API_KEY`/`OPENAI_API_KEY`),
+> así que da *"No valid configuration was found"* + `UnboundLocalError`. Es limitación del
+> checker; el runtime sí usa `OPENROUTER_API_KEY`. Valida así:
 
 ```bash
 source .venv/bin/activate
-rdagent health_check
+
+# 1) Docker + puertos
+rdagent health_check --no-check-env
+
+# 2) LLM real (chat + embedding por OpenRouter) — prueba autoritativa
+python - <<'PY'
+import os, litellm
+from dotenv import load_dotenv
+load_dotenv(".env")
+r = litellm.completion(model=os.getenv("CHAT_MODEL"),
+                       messages=[{"role":"user","content":"Say hi"}])
+print("CHAT OK:", r.choices[0].message.content[:60])
+e = litellm.embedding(model=os.getenv("EMBEDDING_MODEL"),
+                      input=["hello world"],
+                      api_key=os.getenv("LITELLM_PROXY_API_KEY"),
+                      api_base=os.getenv("LITELLM_PROXY_API_BASE"))
+print("EMBED OK, dim:", len(e.data[0]["embedding"]))
+PY
 ```
-Verifica Docker + puertos + acceso a chat y embedding. Para saltar comprobaciones:
-`rdagent health_check --no-check-env` (salta el LLM) o `--no-check-docker`.
+
+Opcional para que el checker pase en verde: añade `DEEPSEEK_API_KEY=<tu key de OpenRouter>` a `.env`.
 
 ---
 
