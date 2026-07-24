@@ -95,7 +95,7 @@ bash prompts/update_us_qlib_rebuild.sh
 
 ### Paso 3 — Primera ejecución corta (valida toda la cadena)
 ```bash
-rdagent fin_quant --loop_n 1
+rdagent fin_quant --loop-n 1
 ```
 La primera vez construye la imagen Docker y prepara datos: **tarda**, es normal. Cuando
 complete una vuelta con backtest, el pipeline funciona.
@@ -113,8 +113,8 @@ Abre http://localhost:19899. No hace falta esperar al final: la UI se puebla por
 
 ### Paso 5 — Ciclo completo
 ```bash
-rdagent fin_quant --loop_n 10          # por iteraciones
-rdagent fin_quant --all_duration "3h"  # o por tiempo
+rdagent fin_quant --loop-n 10          # por iteraciones
+rdagent fin_quant --all-duration "3h"  # o por tiempo
 ```
 
 ### Paso 6 — Reanudar si se corta
@@ -146,13 +146,13 @@ del universo y rota 5 cada periodo.
 
 - **Periodo / universo**: edita `segments` (train/valid/test), `market` y `benchmark` en las
   5 plantillas `rdagent/scenarios/qlib/experiment/*/*.yaml` (ver `Instrucciones Escenario.md §8`).
-- **Nº de iteraciones / tiempo**: flags `--loop_n`, `--all_duration`, `--step_n`.
+- **Nº de iteraciones / tiempo**: flags `--loop-n`, `--all-duration`, `--step-n`.
 - **Modelo LLM**: cambia `CHAT_MODEL` en `.env` (p. ej. a un modelo más barato para pruebas
   o uno más potente para calidad).
 - **Otros escenarios**: prueba `fin_factor` (solo factores) o `fin_model` (solo modelos)
   para aislar cada rama; `general_model` para reproducir un paper.
 
-Consejo de aprendizaje: empieza con `fin_factor --loop_n 1`, entiende una vuelta completa en
+Consejo de aprendizaje: empieza con `fin_factor --loop-n 1`, entiende una vuelta completa en
 la UI (hipótesis → código → backtest), y solo después pasa a `fin_quant` con más iteraciones.
 
 ---
@@ -186,8 +186,8 @@ la UI (hipótesis → código → backtest), y solo después pasa a `fin_quant` 
 ## 10. Ruta de aprendizaje sugerida
 
 1. Lee §1-§3 de este tutorial para el modelo mental.
-2. Haz `fin_factor --loop_n 1` y estudia esa vuelta en la UI.
-3. Repite con `fin_model --loop_n 1` para ver la rama de modelos.
-4. Lanza `fin_quant --loop_n 5` y observa la co-optimización factor+modelo.
+2. Haz `fin_factor --loop-n 1` y estudia esa vuelta en la UI.
+3. Repite con `fin_model --loop-n 1` para ver la rama de modelos.
+4. Lanza `fin_quant --loop-n 5` y observa la co-optimización factor+modelo.
 5. Experimenta cambiando periodo/universo en las plantillas.
 6. Profundiza con el informe técnico y la doc oficial del escenario Quant.

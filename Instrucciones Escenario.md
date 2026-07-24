@@ -33,16 +33,16 @@ Parámetros aceptados (verificados en el código):
 
 | Flag | Efecto |
 |---|---|
-| `--loop_n N` | Nº de iteraciones del loop |
-| `--step_n N` | Ejecuta solo N pasos |
-| `--all_duration "2h"` | Presupuesto de tiempo total |
+| `--loop-n N` | Nº de iteraciones del loop |
+| `--step-n N` | Ejecuta solo N pasos |
+| `--all-duration "2h"` | Presupuesto de tiempo total |
 | `--path <sesión>` | Reanuda una sesión previa |
 | `--checkout / --no-checkout` (`-c/-C`) | Reusar carpeta de logs limpiando o conservando |
 
 ```bash
 rdagent fin_factor --loop-n 3
 rdagent fin_factor --step-n 1
-rdagent fin_factor --all_duration "2h"
+rdagent fin_factor --all-duration "2h"
 rdagent fin_factor --path <sesión>
 ```
 
@@ -50,16 +50,16 @@ rdagent fin_factor --path <sesión>
 
 ```bash
 # fin_factor_report: carpeta de informes PDF
-rdagent fin_factor_report --report-folder=git_ignore_folder/reports --loop_n 2
+rdagent fin_factor_report --report-folder=git_ignore_folder/reports --loop-n 2
 
 # general_model: URL o PDF de un paper (sin datos locales)
 rdagent general_model "https://arxiv.org/pdf/2210.09789"
 
 # data_science: competición + control de loop/tiempo
-rdagent data_science --competition arf-12-hours-prediction-task --loop_n 5
+rdagent data_science --competition arf-12-hours-prediction-task --loop-n 5
 ```
 
-`data_science` acepta además `--timeout`, `--step_n` y `--loop_n`.
+`data_science` acepta además `--timeout`, `--step-n` y `--loop-n`.
 
 ---
 
@@ -81,11 +81,11 @@ Ejemplo de prueba corta y barata de factores:
 
 ```bash
 source .venv/bin/activate
-rdagent fin_factor --loop_n 1
+rdagent fin_factor --loop-n 1
 ```
 
-> Consejo: en la primera prueba de cualquier escenario, limita con `--loop_n 1` o
-> `--all_duration "30m"` para controlar el coste de API antes de lanzar loops largos.
+> Consejo: en la primera prueba de cualquier escenario, limita con `--loop-n 1` o
+> `--all-duration "30m"` para controlar el coste de API antes de lanzar loops largos.
 
 
 ## 5. Copiar dentro del FileSystem de WSL
@@ -126,7 +126,7 @@ df -h /                       # ten ~10-15 GB libres (imagen + datos + workspace
 ### 6.3 Primera ejecución (valida toda la cadena)
 
 ```bash
-rdagent fin_quant --loop_n 1
+rdagent fin_quant --loop-n 1
 ```
 
 La primera vez construye la imagen y prepara los datos: tarda bastante, es normal.
@@ -135,8 +135,8 @@ Cuando complete una vuelta con su backtest, el pipeline funciona.
 ### 6.4 Ciclo completo
 
 ```bash
-rdagent fin_quant --loop_n 10        # por nº de iteraciones
-rdagent fin_quant --all_duration "3h"  # o por presupuesto de tiempo
+rdagent fin_quant --loop-n 10        # por nº de iteraciones
+rdagent fin_quant --all-duration "3h"  # o por presupuesto de tiempo
 ```
 
 ### 6.5 Monitorizar (otra terminal, venv activado)
@@ -155,7 +155,7 @@ rdagent fin_quant --path log/__session__/<loop>/<step>
 
 ### 6.7 Avisos
 
-- **Coste**: cada vuelta hace muchas llamadas al LLM; empieza con `--loop_n 1`.
+- **Coste**: cada vuelta hace muchas llamadas al LLM; empieza con `--loop-n 1`.
 - **Disco**: los workspaces crecen por iteración; limpia
   `git_ignore_folder/RD-Agent_workspace/` y usa `sync_rdagent.sh` (ya los excluye).
 
@@ -231,8 +231,8 @@ Con los datos US en su sitio y (opcional) el parche aplicado:
 
 ```bash
 source .venv/bin/activate
-rdagent fin_quant --loop_n 1     # valida
-rdagent fin_quant --all_duration "3h"
+rdagent fin_quant --loop-n 1     # valida
+rdagent fin_quant --all-duration "3h"
 ```
 
 Las fechas de train/valid/test y el benchmark (`^GSPC`) salen de las plantillas; ajusta ahí
