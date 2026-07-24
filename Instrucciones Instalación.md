@@ -292,6 +292,12 @@ rdagent data_science --competition arf-12-hours-prediction-task
 - **Docker permission denied** → no estás en el grupo `docker` o falta la integración WSL (§3).
 - **Error de embedding en la prueba LiteLLM** → revisa que la clave esté en `LITELLM_PROXY_API_KEY`
   y que `LITELLM_PROXY_API_BASE="https://openrouter.ai/api/v1"`.
+- **`MlflowException: filesystem tracking backend ... maintenance mode`** (backtest de qlib
+  falla con `No result file found`) → mlflow reciente rechaza el file store. Añade a `.env`
+  `MLFLOW_ALLOW_FILE_STORE=true` (se propaga a `qrun` vía `os.environ`); o `export` en la shell.
+- **`TypeError: bad argument type for built-in operation`** en la UI → watcher de Streamlit +
+  torch; pon `fileWatcherType = "none"` en `.streamlit/config.toml` o
+  `STREAMLIT_SERVER_FILE_WATCHER_TYPE=none` al lanzar `rdagent ui`.
 - **Coste de API** → cada loop hace muchas llamadas; puedes activar caché en `.env`
   (`USE_CHAT_CACHE=True`, `USE_EMBEDDING_CACHE=True`).
 - **Datos qlib tardan** → es normal en la primera ejecución de `fin_*`; se cachean en `~/.qlib`.

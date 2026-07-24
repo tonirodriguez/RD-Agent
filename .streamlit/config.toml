@@ -1,2 +1,8 @@
 [client]
 showSidebarNavigation = false
+
+[server]
+# Desactiva el vigilador de ficheros de Streamlit: con torch instalado
+# (dependencia de qlib) provoca "TypeError: bad argument type for built-in
+# operation" al inspeccionar torch._classes.__path__.
+fileWatcherType = "none"
