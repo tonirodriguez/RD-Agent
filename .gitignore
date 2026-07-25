@@ -152,8 +152,12 @@ dmypy.json
 # reports
 reports/
 
-# git_ignore_folder
-git_ignore_folder/
+# git_ignore_folder: ignoramos solo lo pesado/generado; el resto SÍ se versiona.
+# Ignoramos el CONTENIDO pero conservamos la carpeta vía .gitkeep.
+git_ignore_folder/RD-Agent_workspace/*
+!git_ignore_folder/RD-Agent_workspace/.gitkeep
+git_ignore_folder/factor_implementation_source_data/*
+!git_ignore_folder/factor_implementation_source_data/.gitkeep
 
 #cache
 *cache*/

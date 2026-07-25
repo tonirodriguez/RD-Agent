@@ -54,7 +54,7 @@ EXCLUDES=(
   --exclude ".mypy_cache/"
   --exclude ".pytest_cache/"
   --exclude ".ruff_cache/"
-  --exclude "git_ignore_folder/"
+  --exclude "git_ignore_folder/RD-Agent_workspace/"
   --exclude "log/"
   --exclude "logs/"
   --exclude "*.log"
