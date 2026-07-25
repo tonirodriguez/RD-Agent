@@ -70,6 +70,21 @@ En `fin_quant` el loop **alterna** ramas de factores y de modelos (co-optimizaci
   plantillas de qlib ya están en US. (Ver `Instrucciones Escenario.md §7-§8`.)
 - **Ejecución**: en WSL, desde `~/dev/RD-Agent`, con Docker sin `sudo`.
 
+### 4.1 ¿Hace falta GPU?
+
+**No.** RD-Agent funciona perfectamente sin GPU:
+
+- **El LLM no usa GPU local** — la inferencia (DeepSeek V4 Flash) ocurre en OpenRouter.
+- **La GPU solo la usarían algunos modelos de qlib en el backtest**:
+  - `LGBModel` (LightGBM/GBDT), en `conf_baseline` y `conf_combined_factors` → **CPU** siempre.
+  - `GeneralPTNN` (red neuronal PyTorch), en las otras 3 plantillas → puede usar GPU
+    (`GPU: 0` en sus kwargs), pero **cae a CPU automáticamente** si no hay CUDA.
+- En `env.py`, `enable_gpu = True` con la lógica de *"desactivar GPU si no está disponible"*.
+
+La única diferencia sin GPU es la **velocidad**: las iteraciones con red neuronal son más
+lentas en CPU; las de LightGBM van igual. Para forzar CPU explícitamente:
+`export CUDA_VISIBLE_DEVICES=""` antes de lanzar.
+
 ---
 
 ## 5. Práctica guiada — tu primer ciclo
