@@ -117,14 +117,21 @@ complete una vuelta con backtest, el pipeline funciona.
 
 ### Paso 4 — Ver resultados en la UI (en otra terminal)
 ```bash
+cd /home/toni/dev/RD-Agent      # desde donde lanzaste fin_quant
 source .venv/bin/activate
-# localiza la traza más reciente:
-ls -lt log/ | head
-# apunta la UI a ESA carpeta (no a "log/"):
-STREAMLIT_SERVER_FILE_WATCHER_TYPE=none rdagent ui --port 19899 --log-dir "log/<timestamp>/"
+STREAMLIT_SERVER_FILE_WATCHER_TYPE=none rdagent ui --port 19899 --log-dir "log/"
+```
+**Importante:** `--log-dir` apunta a la carpeta **padre `log/`** (NO a la carpeta con
+timestamp). En la UI, abre el desplegable **"Select from `log/`"** y elige la carpeta con
+timestamp de tu run. Si apuntas directamente a `log/<timestamp>/`, el desplegable solo
+mostrará plantillas como `debug_tpl` y no verás resultados.
+
+Cada ejecución crea su carpeta `log/<timestamp>/`. El run "completo" es el que **más
+ficheros/subcarpetas** tiene (los que fallaron pronto tienen muy pocos). Para identificarlo:
+```bash
+for d in log/2026-*/; do echo "$(find "$d" -type f | wc -l) ficheros  $d"; done | sort -n
 ```
 Abre http://localhost:19899. No hace falta esperar al final: la UI se puebla por pasos.
-(Recuerda: cada run crea su subcarpeta con timestamp dentro de `log/`.)
 
 ### Paso 5 — Ciclo completo
 ```bash
@@ -181,7 +188,7 @@ la UI (hipótesis → código → backtest), y solo después pasa a `fin_quant` 
 | Docker permission denied | Grupo `docker` / integración WSL (Instalación §3) |
 | `TypeError: bad argument type...` en Streamlit | Watcher + torch; `fileWatcherType="none"` |
 | `MlflowException: filesystem tracking backend...` / `No result file found` | mlflow rechaza file store; `MLFLOW_ALLOW_FILE_STORE=true` en `.env` |
-| UI vacía | Apunta `--log-dir` a la traza con timestamp y selecciónala en el desplegable |
+| UI vacía / solo `debug_tpl` en el combo | Apunta `--log-dir` a la carpeta **padre `log/`** y elige el timestamp en el desplegable (no apuntes a `log/<timestamp>/`) |
 | Disco lleno | Limpia `git_ignore_folder/RD-Agent_workspace/`, `docker system prune` |
 
 ---

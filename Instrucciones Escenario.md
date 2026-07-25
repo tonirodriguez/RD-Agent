@@ -142,10 +142,17 @@ rdagent fin_quant --all-duration "3h"  # o por presupuesto de tiempo
 ### 6.5 Monitorizar (otra terminal, venv activado)
 
 ```bash
-rdagent ui --port 19899 --log-dir "log/"
+STREAMLIT_SERVER_FILE_WATCHER_TYPE=none rdagent ui --port 19899 --log-dir "log/"
 ```
+`--log-dir` debe apuntar a la carpeta **padre `log/`** (NO a `log/<timestamp>/`). En la UI,
+abre el desplegable **"Select from `log/`"** y elige la carpeta con timestamp de tu run.
+Si apuntas a `log/<timestamp>/` directamente, solo verás plantillas como `debug_tpl`.
+
 http://localhost:19899 → hipótesis, código generado y métricas de backtest (IC, retorno
 anualizado, Sharpe) por iteración.
+
+> El run "completo" es el que más ficheros tiene (los que fallaron pronto tienen pocos).
+> Para localizarlo: `for d in log/2026-*/; do echo "$(find "$d" -type f | wc -l)  $d"; done | sort -n`
 
 ### 6.6 Reanudar si se corta
 

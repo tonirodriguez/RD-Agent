@@ -246,11 +246,16 @@ rdagent data_science --competition tabular-playground-series-dec-2021
 En otra terminal (con el entorno activado):
 
 ```bash
-rdagent ui --port 19899 --log-dir "log/"                 # escenarios fin_*
-rdagent ui --port 19899 --log-dir "log/" --data-science  # escenario data_science
+STREAMLIT_SERVER_FILE_WATCHER_TYPE=none rdagent ui --port 19899 --log-dir "log/"                 # escenarios fin_*
+STREAMLIT_SERVER_FILE_WATCHER_TYPE=none rdagent ui --port 19899 --log-dir "log/" --data-science  # escenario data_science
 ```
 
 Abre **http://localhost:19899**
+
+> `--log-dir` apunta a la carpeta **padre `log/`**; en la UI, elige tu run (carpeta con
+> timestamp) en el desplegable **"Select from `log/`"**. No apuntes a `log/<timestamp>/`
+> directamente (solo verías plantillas como `debug_tpl`). El `STREAMLIT_SERVER_FILE_WATCHER_TYPE=none`
+> evita el `TypeError` del watcher con torch.
 
 ---
 
