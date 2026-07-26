@@ -320,3 +320,47 @@ Split temporal por defecto (con variables Jinja, sobreescribibles):
 
 > Nota: son **cinco** ficheros; si cambias el periodo, aplícalo en todos para mantener la
 > coherencia entre las ramas de factores y de modelos.
+
+---
+
+## 9. Cómo se generan las hipótesis (y cómo orientarlas)
+
+En RD-Agent **no defines las hipótesis a mano** — las **genera el LLM** en la fase `propose`
+de cada loop. Tampoco la primera: en el loop 0, al no haber historial, el sistema inyecta
+literalmente *"No previous hypothesis and feedback available since it's the first round"* y el
+LLM propone desde cero.
+
+**Lo que sí está fijado es el "problema"**, no la hipótesis: el escenario define el marco
+(predecir retornos sobre tu universo S&P 500, con el split configurado, maximizando
+IC/rendimiento de cartera). Las hipótesis son los intentos evolutivos del agente para
+resolverlo.
+
+### Qué guía la generación
+
+- **Descripción del escenario (background)** → sesga el *tipo* de hipótesis.
+- **Especificación de hipótesis** → define qué es una buena hipótesis.
+- **Feedback / SOTA** → cada vuelta lee el backtest anterior para proponer la siguiente
+  (motor evolutivo; se alimenta solo).
+- **Pista RAG hardcodeada**: los primeros <15 loops prueba factores simples; después, factores
+  de alto IC (ML). Está en `factor_proposal.py` / `model_proposal.py`.
+
+### Rutas de los ficheros (raíz del repo)
+
+| Qué | Ruta |
+|---|---|
+| Backgrounds (`qlib_quant_background`, `qlib_factor_background`, `qlib_model_background`) y tablas de config | `rdagent/scenarios/qlib/experiment/prompts.yaml` |
+| `factor_hypothesis_specification`, `model_hypothesis_specification`, `hypothesis_and_feedback`, `last_/sota_hypothesis_and_feedback` | `rdagent/scenarios/qlib/prompts.yaml` |
+| Lógica de propuesta + pista RAG | `rdagent/scenarios/qlib/proposal/{factor_proposal,model_proposal,quant_proposal}.py` |
+| Bandit factor↔modelo por vuelta | `rdagent/scenarios/qlib/proposal/bandit.py` |
+| Qué clase de hipótesis usa cada escenario | `rdagent/app/qlib_rd_loop/conf.py` |
+
+### Palancas para orientar al agente (incluso desde el loop 0)
+
+1. Editar el **`qlib_quant_background`** (en `experiment/prompts.yaml`) para describir tu tesis
+   o el dominio hacia el que quieres dirigirlo.
+2. Editar la **`*_hypothesis_specification`** (en `prompts.yaml`) para acotar qué considera una
+   buena hipótesis.
+3. (Avanzado) Ajustar la **pista RAG** en `factor_proposal.py` / `model_proposal.py` para
+   cambiar la estrategia de exploración inicial.
+
+Tras editar, sincroniza: `bash sync_rdagent.sh --to-wsl`.
